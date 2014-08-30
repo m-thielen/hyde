@@ -441,3 +441,27 @@ def render(parser, token):
     else:
         data = template.Variable(bits[3])
     return RenderNode(template_path, node_list=nodelist, data=data)
+
+
+@register.filter(name="node_display_name")
+def node_name(value):
+    """
+    Custom template filter that replaces node.name (which actually is the name
+    of the file system directory of the node) with a name read from the
+    NODE_NAME_MAP dictionary located in the settings file.
+
+    Author: mt@thiguten.de, August 2014
+
+    :param value: a node name (i.e. file system directory name of a node)
+    :return: display name for that node
+    """
+    map = None
+    try:
+        map = settings.NODE_NAME_MAP
+        name = map[value]
+    except:
+        # run through hyde's unslugify filter
+        return unslugify(value)
+
+    return name
+
