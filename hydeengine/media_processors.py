@@ -77,9 +77,6 @@ class SASSMake:
         target_fn = resource.source_file.path_without_extension + ".css"
         # target_fn points to temp directory; make it point to deploy directory
         target_fn = target_fn.replace(settings.TMP_DIR, settings.DEPLOY_DIR)
-        sys.stdout.write("source: %s\n" % source_fn)
-        sys.stdout.write("target: %s\n" % target_fn)
-        sys.stdout.flush()
         if not os.path.exists(target_fn):
             # target does not exist - compile it
             SASS.process(resource)
