@@ -4,6 +4,7 @@ import sys
 import urllib
 import urllib2
 import shlex
+
 from django.template.loader import render_to_string
 from django.conf import settings
 from file_system import File
@@ -68,6 +69,11 @@ class SASS:
 
 class SASSMake:
     @staticmethod
+    def p(s):
+        sys.stdout.write(s)
+        sys.stdout.flush()
+
+    @staticmethod
     def process(resource):
         """
         MT: "make" the target: don't compile if target is not out of date.
@@ -80,20 +86,15 @@ class SASSMake:
         if not os.path.exists(target_fn):
             # target does not exist - compile it
             SASS.process(resource)
-            sys.stdout.write("target %s does not exist - compiling %s\n" % (target_fn, str(resource)))
-            sys.stdout.flush()
+            SASSMake.p("target %s does not exist - compiling %s\n" % (target_fn, str(resource)))
             return
 
         # get existing target last mod time
         target_mtime = os.path.getmtime(target_fn)
-        import time
-        sys.stdout.write("mtime: %s\n" % time.ctime(target_mtime))
-        sys.stdout.flush()
 
         def check_file(pfn):
             """ parse file for @imports; returns True if target is out of date """
-            sys.stdout.write("SASSMake: " + pfn + "\n")
-            sys.stdout.flush()
+            SASSMake.p("SASSMake: " + pfn + "\n")
             if os.path.getmtime(pfn) > target_mtime:
                 return True
             with open(pfn, "r") as f:
@@ -109,7 +110,10 @@ class SASSMake:
                         if not os.path.exists(ifn):
                             ifn += '.scss'
                         # check file
-                        check_file(ifn)
+                        if check_file(ifn):
+                            # if one needs to be built the others don't bother
+                            return True
+            return False
 
         if check_file(source_fn):
             # out of date; build it
