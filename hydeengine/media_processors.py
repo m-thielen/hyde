@@ -3,6 +3,8 @@ import re
 import sys
 import urllib
 import urllib2
+import shlex
+
 from django.template.loader import render_to_string
 from django.conf import settings
 from file_system import File
@@ -64,6 +66,59 @@ class SASS:
             return None
         resource.source_file.delete()
         resource.source_file = out_file
+
+class SASSMake:
+    @staticmethod
+    def p(s):
+        sys.stdout.write(s)
+        sys.stdout.flush()
+
+    @staticmethod
+    def process(resource):
+        """
+        MT: "make" the target: don't compile if target is not out of date.
+        This is determined by checking the file dates of all dependant files.
+        """
+        source_fn = resource.file.path
+        target_fn = resource.source_file.path_without_extension + ".css"
+        # target_fn points to temp directory; make it point to deploy directory
+        target_fn = target_fn.replace(settings.TMP_DIR, settings.DEPLOY_DIR)
+        if not os.path.exists(target_fn):
+            # target does not exist - compile it
+            SASS.process(resource)
+            SASSMake.p("target %s does not exist - compiling %s\n" % (target_fn, str(resource)))
+            return
+
+        # get existing target last mod time
+        target_mtime = os.path.getmtime(target_fn)
+
+        def check_file(pfn):
+            """ parse file for @imports; returns True if target is out of date """
+            SASSMake.p("SASSMake: " + pfn + "\n")
+            if os.path.getmtime(pfn) > target_mtime:
+                return True
+            with open(pfn, "r") as f:
+                for line in f:
+                    # check for @import lines
+                    parts = shlex.split(line)
+                    if len(parts) == 2 and parts[0] == "@import":
+                        ifn = parts[1].strip(";")
+                        # prepend current file path
+                        ifn = os.path.join(os.path.dirname(os.path.abspath(pfn)),
+                                           ifn)
+                        # append .scss if this file is not found
+                        if not os.path.exists(ifn):
+                            ifn += '.scss'
+                        # check file
+                        if check_file(ifn):
+                            # if one needs to be built the others don't bother
+                            return True
+            return False
+
+        if check_file(source_fn):
+            # out of date; build it
+            SASS.process(resource)
+            return
 
 class LessCSS:
     @staticmethod

@@ -443,6 +443,53 @@ def render(parser, token):
     return RenderNode(template_path, node_list=nodelist, data=data)
 
 
+class AllImagesNode(template.Node):
+    def __init__(self, path, css_classes):
+        self.css_classes = css_classes
+        # get all image files in directory
+        import imghdr
+        self.imgfns = []
+        for f in os.listdir(os.path.join(settings.MEDIA_DIR, path)):
+            fn = os.path.join(settings.MEDIA_DIR, path, f)
+            if os.path.isfile(fn) and imghdr.what(fn) in ('jpeg', 'png', 'gif'):
+                self.imgfns.append(os.path.join(path, f))
+
+    def render(self, context):
+        out = u''
+        for i in self.imgfns:
+            out += u'<img class="%s" src="%s/media/%s">\n' % (self.css_classes, settings.SITE_ROOT, i)
+        return out
+
+
+@register.tag(name="all_images")
+def all_images(parser, token):
+    """
+    Custom template tag that renders all images in a directory.
+
+    Parameters:
+
+      path   - the path to search for images (.jpg, .png), relative to MEDIA_DIR
+      cls    - a CSS class name to apply to the rendered <img>s
+
+    Author: mt@thiguten.de, January 2015
+    """
+    try:
+        bits = token.split_contents()
+        print "-----", bits
+        if len(bits) < 2:
+            raise ValueError
+    except ValueError:
+        raise template.TemplateSyntaxError("Syntax: {%% %s path <img CSS classes> %%}'" % 
+                                           token.contents.split()[0])
+    path = bits[1].replace('"', '').strip()
+    if len(bits) > 2:
+        css_classes = bits[2].replace('"', '').strip()
+    else:
+        css_classes = ""
+
+    return AllImagesNode(path, css_classes)
+
+
 @register.filter(name="node_display_name")
 def node_name(value):
     """
