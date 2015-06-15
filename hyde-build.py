@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # hyde build script - searches the current directory and its
-# ancestors for a hyde root directory. If found, it executes 
+# ancestors for a hyde root directory. If found, it executes
 # hyde -g to build the site.
 #
 # Author: mt@thiguten.de
@@ -20,8 +20,9 @@ def check_if_hyde_dir(path):
     """
     files = os.listdir(path)
     return "settings.py" in files
-    
+
 path = os.path.abspath(".")
+sys.stderr.write("Running hyde-build.py in %s\n" % path)
 found = check_if_hyde_dir(path)
 
 while not found:
@@ -29,7 +30,7 @@ while not found:
     if path == os.sep:
         # arrived at root
         break
-        
+
     found = check_if_hyde_dir(path)
 
 
@@ -37,17 +38,24 @@ if not found:
     sys.stderr.write("No hyde settings.py found in tree.\n\n")
     sys.exit(2)
 
+hyde_ve_dir = os.path.join(os.getenv("HOME"), 've/hyde/')
+
+# get hyde python interpreter
+py = os.path.join(hyde_ve_dir, 'bin/python')
+# get hyde script
+hyde = os.path.join(hyde_ve_dir, 'hyde/hyde.py')
+
 # execute hyde build
 print "Running hyde build in " + path
 if len(sys.argv) > 1:
     # run with arguments provided by caller
-    ret = subprocess.call(sys.argv[1:], cwd=path)
+    ret = subprocess.call([py, hyde] + sys.argv[1:], cwd=path)
 else:
-    ret = subprocess.call(["hyde", "-g"], cwd=path)
+    ret = subprocess.call([py, hyde, "-g"], cwd=path)
 
 sys.exit(ret)
 
 
 
-    
-    
+
+
